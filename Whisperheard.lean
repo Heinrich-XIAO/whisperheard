@@ -7,3 +7,5 @@ import Whisperheard.Circuits
 import Whisperheard.Interp.Mechanism
 import Whisperheard.Interp.Law
 import Whisperheard.Interp.Whisper
+import Whisperheard.Interp.BasisData
+import Whisperheard.Interp.Basis

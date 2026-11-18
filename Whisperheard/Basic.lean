@@ -85,6 +85,16 @@ theorem sumN_single (n : Nat) (f : Nat → Int) (j : Nat) (hj : j < n)
     · rw [ih (by omega) (fun k hk hkj => h k (by omega) hkj), h n (by omega) (Ne.symm hjn)]
       simp
 
+theorem sumN_comm (n m : Nat) (f : Nat → Nat → Int) :
+    sumN n (fun a => sumN m (fun b => f a b)) = sumN m (fun b => sumN n (fun a => f a b)) := by
+  induction n with
+  | zero => simp [sumN, sumN_zero]
+  | succ n ih => simp only [sumN]; rw [ih, ← sumN_add]
+
+theorem sumN_mul_right (n : Nat) (c : Int) (f : Nat → Int) :
+    sumN n (fun k => f k * c) = sumN n f * c := by
+  rw [Int.mul_comm, ← sumN_mul_left]; apply sumN_congr; intro k _; exact Int.mul_comm _ _
+
 /-! ## Linearity -/
 
 theorem dot_add_left (n : Nat) (u v w : Vec) : dot n (u ⊞ v) w = dot n u w + dot n v w := by
@@ -125,6 +135,30 @@ theorem zero_vadd (u : Vec) : zeroV ⊞ u = u := by funext k; simp [vadd, zeroV]
 theorem dot_congr (n : Nat) (u u' v v' : Vec) (hu : ∀ k, k < n → u k = u' k)
     (hv : ∀ k, k < n → v k = v' k) : dot n u v = dot n u' v' := by
   unfold dot; apply sumN_congr; intro k hk; rw [hu k hk, hv k hk]
+
+/-- Applying a matrix to a linear combination of columns of `B`. -/
+theorem mulVec_comb (A B : Mat) (d m : Nat) (c : Nat → Int) (k : Nat) :
+    mulVec A d (fun r => sumN m (fun a => B r a * c a)) k =
+      sumN m (fun a => c a * mulVec A d (col B a) k) := by
+  unfold mulVec col
+  rw [show (fun r => A k r * sumN m (fun a => B r a * c a)) =
+      (fun r => sumN m (fun a => A k r * B r a * c a)) by
+    funext r; rw [← sumN_mul_left]; apply sumN_congr; intro a _; grind]
+  rw [sumN_comm]; apply sumN_congr; intro a _
+  rw [← sumN_mul_left]; apply sumN_congr; intro r _; grind
+
+/-- Dot product of two linear combinations. -/
+theorem dot_comb (n m : Nat) (c e : Nat → Int) (f g : Nat → Vec) :
+    dot n (fun k => sumN m (fun a => c a * f a k)) (fun k => sumN m (fun b => e b * g b k)) =
+      sumN m (fun a => sumN m (fun b => c a * e b * dot n (f a) (g b))) := by
+  unfold dot
+  rw [show (fun k => sumN m (fun a => c a * f a k) * sumN m (fun b => e b * g b k)) =
+      (fun k => sumN m (fun a => sumN m (fun b => c a * e b * (f a k * g b k)))) by
+    funext k; rw [← sumN_mul_right]; apply sumN_congr; intro a _
+    rw [← sumN_mul_left]; apply sumN_congr; intro b _; grind]
+  rw [sumN_comm]; apply sumN_congr; intro a _
+  rw [sumN_comm]; apply sumN_congr; intro b _
+  rw [← sumN_mul_left]
 
 /-- `u` and `v` agree on the first `n` coordinates. -/
 def EqOn (n : Nat) (u v : Vec) : Prop := ∀ k, k < n → u k = v k
