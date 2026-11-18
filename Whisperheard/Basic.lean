@@ -163,6 +163,9 @@ theorem dot_comb (n m : Nat) (c e : Nat → Int) (f g : Nat → Vec) :
 /-- `u` and `v` agree on the first `n` coordinates. -/
 def EqOn (n : Nat) (u v : Vec) : Prop := ∀ k, k < n → u k = v k
 
+instance (n : Nat) (u v : Vec) : Decidable (EqOn n u v) :=
+  inferInstanceAs (Decidable (∀ k, k < n → u k = v k))
+
 theorem mulVec_eqOn (A : Mat) (n : Nat) (u v : Vec) (h : EqOn n u v) :
     mulVec A n u = mulVec A n v := by
   funext r; unfold mulVec; apply sumN_congr; intro k hk; rw [h k hk]

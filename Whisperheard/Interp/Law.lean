@@ -70,8 +70,15 @@ structure LawHyp (N : Nat) (cm : Int) (w : Nat → Int) : Prop where
   w0_lt : w 0 < w 1
   /-- recency: the ramp is strictly increasing on `1, …, N-1` -/
   mono : ∀ a b, 1 ≤ a → a < b → b < N → w a < w b
-  /-- a match anywhere beats a non-match anywhere -/
-  match_wins : w (N - 1) < cm + w 1
+  /-- a match is never beaten by a non-match (ties allowed: a later non-match
+  that ties loses to the earlier match by first-argmax) -/
+  match_wins : w (N - 1) ≤ cm + w 1
+
+theorem LawHyp.cm_nonneg {N : Nat} {cm : Int} {w : Nat → Int} (h : LawHyp N cm w) : 0 ≤ cm := by
+  have hN := h.two_le
+  by_cases h1 : N - 1 = 1
+  · have := h.match_wins; rw [h1] at this; omega
+  · have := h.mono 1 (N - 1) (by omega) (by omega) (by omega); have := h.match_wins; omega
 
 theorem LawHyp.w_pos {N : Nat} {cm : Int} {w : Nat → Int} (h : LawHyp N cm w) (a : Nat)
     (ha : 1 ≤ a) (haN : a < N) : 0 < w a := by
@@ -102,8 +109,7 @@ theorem argmax_score2_eq_target {N : Nat} {cm : Int} {w : Nat → Int} (hw : Law
     (x : Nat → Nat) (i : Nat) :
     argmaxUpTo (score2Form N cm w x i) i = target N x i := by
   have hN := hw.two_le
-  have hcm : 0 < cm := by
-    have := hw.w_ge_one (N - 1) (by omega) (by omega); have := hw.match_wins; omega
+  have hcm : 0 ≤ cm := hw.cm_nonneg
   unfold target
   simp only
   generalize hr : min i (N - 1) = r
@@ -116,12 +122,97 @@ theorem argmax_score2_eq_target {N : Nat} {cm : Int} {w : Nat → Int} (hw : Law
     have hjN : j < N := by omega
     have sj : score2Form N cm w x i j = cm + w j := by
       unfold score2Form; rw [prevPos_in hj1 hjN, ite_eq_left hjm.symm, ite_eq_left hjN]
-    apply argmaxUpTo_eq_of_strict _ _ _ (by omega)
-    intro k hk hkj
+    have wj0 := hw.w_pos j hj1 hjN
+    have wj1 := hw.w_ge_one j hj1 hjN
+    have top := hw.match_wins
+    have w01 := hw.w0_lt
+    apply argmaxUpTo_eq _ _ _ (by omega)
+    · -- `j` is a maximum
+      intro k hk
+      rw [sj]; unfold score2Form
+      by_cases hk0 : k = 0
+      · subst hk0
+        rw [prevPos_out (by omega), ite_eq_left (by omega : (0:Nat) < N)]
+        split <;> omega
+      by_cases hkN : k < N
+      · rw [prevPos_in (by omega) hkN, ite_eq_left hkN]
+        have wk := hw.w_le_top k (by omega) hkN
+        by_cases hkl : k ≤ j
+        · by_cases hkj : k = j
+          · subst hkj; split <;> omega
+          · have := hw.mono k j (by omega) (by omega) hjN
+            split <;> omega
+        · have hne := hlater k (by omega) (by omega)
+          rw [ite_eq_right (fun h => hne h.symm)]
+          omega
+      · rw [prevPos_out (by omega), ite_eq_right hkN]
+        split <;> omega
+    · -- everything before `j` is strictly worse
+      intro k hk
+      rw [sj]; unfold score2Form
+      by_cases hk0 : k = 0
+      · subst hk0
+        rw [prevPos_out (by omega), ite_eq_left (by omega : (0:Nat) < N)]
+        split <;> omega
+      · rw [prevPos_in (by omega) (by omega), ite_eq_left (by omega : k < N)]
+        have := hw.mono k j (by omega) hk hjN
+        split <;> omega
+  | none =>
+    have hno := findMatch_none x (x i) r hf
+    simp only [Option.getD_none]
+    by_cases hr0 : r = 0
+    · subst hr0
+      have : i = 0 := by omega
+      subst this; rfl
+    have hx0 : x 0 ≠ x i := by have := hno 1 (by omega) (by omega); simpa using this
+    have sr : score2Form N cm w x i r = w r := by
+      unfold score2Form
+      rw [prevPos_in (by omega) hrN, ite_eq_right (fun h => hno r (by omega) (Nat.le_refl _) h.symm),
+        ite_eq_left hrN]; omega
+    apply argmaxUpTo_eq_of_strict _ _ _ hri
+    intro k hk hkr
+    rw [sr]
+    have wr := hw.w_pos r (by omega) hrN
+    have wr1 := hw.w_ge_one r (by omega) hrN
+    have w01 := hw.w0_lt
+    unfold score2Form
+    by_cases hk0 : k = 0
+    · subst hk0
+      rw [prevPos_out (by omega), ite_eq_right (fun h => hx0 h.symm),
+        ite_eq_left (by omega : (0:Nat) < N)]; omega
+    by_cases hkl : k < r
+    · rw [prevPos_in (by omega) (by omega), ite_eq_right (fun h => hno k (by omega) (by omega) h.symm),
+        ite_eq_left (by omega : k < N)]
+      have := hw.mono k r (by omega) hkl hrN; omega
+    · -- r < k ≤ i forces r = N - 1, so k is outside the window
+      have hkN : ¬ k < N := by omega
+      rw [prevPos_out (by omega), ite_eq_right (fun h => hx0 h.symm), ite_eq_right hkN]; omega
+
+/-- **No ties.** If a match *strictly* beats every non-match, head 2's
+maximum is unique: every other key scores strictly less than `target`. -/
+theorem score2_lt_target {N : Nat} {cm : Int} {w : Nat → Int} (hw : LawHyp N cm w)
+    (hstrict : w (N - 1) < cm + w 1) (x : Nat → Nat) (i k : Nat) (hk : k ≤ i)
+    (hkt : k ≠ target N x i) :
+    score2Form N cm w x i k < score2Form N cm w x i (target N x i) := by
+  have hN := hw.two_le
+  have hcm : 0 ≤ cm := hw.cm_nonneg
+  unfold target at hkt ⊢
+  simp only at hkt ⊢
+  generalize hr : min i (N - 1) = r at hkt ⊢
+  have hri : r ≤ i := by omega
+  have hrN : r < N := by omega
+  cases hf : findMatch x (x i) r with
+  | some j =>
+    obtain ⟨hj1, hjr, hjm, hlater⟩ := findMatch_some x (x i) r j hf
+    simp only [Option.getD_some]
+    have hjN : j < N := by omega
+    have sj : score2Form N cm w x i j = cm + w j := by
+      unfold score2Form; rw [prevPos_in hj1 hjN, ite_eq_left hjm.symm, ite_eq_left hjN]
+    have hkj : k ≠ j := by rw [hf] at hkt; simpa using hkt
     rw [sj]
     have wj := hw.w_pos j hj1 hjN
     have wj1 := hw.w_ge_one j hj1 hjN
-    have top := hw.match_wins
+    have top := hstrict
     have w01 := hw.w0_lt
     unfold score2Form
     by_cases hk0 : k = 0
@@ -145,14 +236,13 @@ theorem argmax_score2_eq_target {N : Nat} {cm : Int} {w : Nat → Int} (hw : Law
     by_cases hr0 : r = 0
     · subst hr0
       have : i = 0 := by omega
-      subst this; rfl
+      subst this; rw [hf] at hkt; simp at hkt; omega
     have hx0 : x 0 ≠ x i := by have := hno 1 (by omega) (by omega); simpa using this
     have sr : score2Form N cm w x i r = w r := by
       unfold score2Form
       rw [prevPos_in (by omega) hrN, ite_eq_right (fun h => hno r (by omega) (Nat.le_refl _) h.symm),
         ite_eq_left hrN]; omega
-    apply argmaxUpTo_eq_of_strict _ _ _ hri
-    intro k hk hkr
+    have hkr : k ≠ r := by rw [hf] at hkt; simpa using hkt
     rw [sr]
     have wr := hw.w_pos r (by omega) hrN
     have wr1 := hw.w_ge_one r (by omega) hrN
