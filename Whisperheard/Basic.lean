@@ -126,6 +126,20 @@ theorem dot_congr (n : Nat) (u u' v v' : Vec) (hu : ∀ k, k < n → u k = u' k)
     (hv : ∀ k, k < n → v k = v' k) : dot n u v = dot n u' v' := by
   unfold dot; apply sumN_congr; intro k hk; rw [hu k hk, hv k hk]
 
+/-- `u` and `v` agree on the first `n` coordinates. -/
+def EqOn (n : Nat) (u v : Vec) : Prop := ∀ k, k < n → u k = v k
+
+theorem mulVec_eqOn (A : Mat) (n : Nat) (u v : Vec) (h : EqOn n u v) :
+    mulVec A n u = mulVec A n v := by
+  funext r; unfold mulVec; apply sumN_congr; intro k hk; rw [h k hk]
+
+theorem dot_eqOn (n : Nat) (u u' v v' : Vec) (hu : EqOn n u u') (hv : EqOn n v v') :
+    dot n u v = dot n u' v' := dot_congr n u u' v v' hu hv
+
+theorem EqOn.refl (n : Nat) (u : Vec) : EqOn n u u := fun _ _ => rfl
+theorem EqOn.add {n : Nat} {u u' v v' : Vec} (hu : EqOn n u u') (hv : EqOn n v v') :
+    EqOn n (u ⊞ v) (u' ⊞ v') := fun k hk => by simp only [vadd]; rw [hu k hk, hv k hk]
+
 theorem ofRows_out_col (L : List (List Int)) (r c : Nat)
     (h : ∀ row ∈ L, row.length ≤ c) : ofRows L r c = 0 := by
   unfold ofRows

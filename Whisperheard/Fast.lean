@@ -23,16 +23,6 @@ theorem getD_map_range {α : Type} (n : Nat) (f : Nat → α) (dflt : α) (k : N
 theorem ofL_toL (n : Nat) (v : Vec) (k : Nat) (hk : k < n) : ofL (toL n v) k = v k :=
   getD_map_range n v 0 k hk
 
-/-- `u` and `v` agree on the first `n` coordinates. -/
-def EqOn (n : Nat) (u v : Vec) : Prop := ∀ k, k < n → u k = v k
-
-theorem mulVec_eqOn (A : Mat) (n : Nat) (u v : Vec) (h : EqOn n u v) :
-    mulVec A n u = mulVec A n v := by
-  funext r; unfold mulVec; apply sumN_congr; intro k hk; rw [h k hk]
-
-theorem dot_eqOn (n : Nat) (u u' v v' : Vec) (hu : EqOn n u u') (hv : EqOn n v v') :
-    dot n u v = dot n u' v' := dot_congr n u u' v v' hu hv
-
 /-- One attention head applied to cached residuals `R` (one list per position). -/
 structure HeadRun where
   qs : List (List Int)

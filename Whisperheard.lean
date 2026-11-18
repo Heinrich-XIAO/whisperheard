@@ -4,3 +4,6 @@ import Whisperheard.Model
 import Whisperheard.Weights
 import Whisperheard.Fast
 import Whisperheard.Circuits
+import Whisperheard.Interp.Mechanism
+import Whisperheard.Interp.Law
+import Whisperheard.Interp.Whisper
