@@ -160,6 +160,23 @@ theorem dot_comb (n m : Nat) (c e : Nat → Int) (f g : Nat → Vec) :
   rw [sumN_comm]; apply sumN_congr; intro b _
   rw [← sumN_mul_left]
 
+theorem mulVec_mmul (A B : Mat) (m n : Nat) (v : Vec) :
+    mulVec (mmul A B m) n v = mulVec A m (mulVec B n v) := by
+  funext r; unfold mulVec mmul
+  rw [show (fun c => sumN m (fun k => A r k * B k c) * v c) =
+      (fun c => sumN m (fun k => A r k * B k c * v c)) by funext c; rw [← sumN_mul_right]]
+  rw [sumN_comm]; apply sumN_congr; intro k _
+  rw [← sumN_mul_left]; apply sumN_congr; intro c _; grind
+
+/-- Moving a matrix across a dot product. -/
+theorem dot_mulVec_left (R : Mat) (m n : Nat) (x y : Vec) :
+    dot n (mulVec R m x) y = dot m x (mulVec (transpose R) n y) := by
+  unfold dot mulVec transpose
+  rw [show (fun k => sumN m (fun a => R k a * x a) * y k) =
+      (fun k => sumN m (fun a => R k a * x a * y k)) by funext k; rw [← sumN_mul_right]]
+  rw [sumN_comm]; apply sumN_congr; intro a _
+  rw [← sumN_mul_left]; apply sumN_congr; intro k _; grind
+
 /-- `u` and `v` agree on the first `n` coordinates. -/
 def EqOn (n : Nat) (u v : Vec) : Prop := ∀ k, k < n → u k = v k
 
@@ -176,6 +193,14 @@ theorem dot_eqOn (n : Nat) (u u' v v' : Vec) (hu : EqOn n u u') (hv : EqOn n v v
 theorem EqOn.refl (n : Nat) (u : Vec) : EqOn n u u := fun _ _ => rfl
 theorem EqOn.add {n : Nat} {u u' v v' : Vec} (hu : EqOn n u u') (hv : EqOn n v v') :
     EqOn n (u ⊞ v) (u' ⊞ v') := fun k hk => by simp only [vadd]; rw [hu k hk, hv k hk]
+
+/-- An identity matrix (on the first `n` coordinates) acts as the identity. -/
+theorem mulVec_id (I : Mat) (n : Nat) (hI : ∀ a, a < n → ∀ b, b < n → I a b = if a = b then 1 else 0)
+    (v : Vec) : EqOn n (mulVec I n v) v := by
+  intro a ha
+  unfold mulVec
+  rw [sumN_single n _ a ha (fun b hb hba => by rw [hI a ha b hb, ite_eq_right (Ne.symm hba)]; simp)]
+  rw [hI a ha a ha]; simp
 
 theorem ofRows_out_col (L : List (List Int)) (r c : Nat)
     (h : ∀ row ∈ L, row.length ≤ c) : ofRows L r c = 0 := by
