@@ -1,0 +1,10 @@
+name = "whisperheard"
+version = "0.1.0"
+defaultTargets = ["Whisperheard", "whisperheard"]
+
+[[lean_lib]]
+name = "Whisperheard"
+
+[[lean_exe]]
+name = "whisperheard"
+root = "Main"
