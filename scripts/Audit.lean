@@ -13,3 +13,7 @@ open Whisperheard Whisperheard.Interp
 #print axioms decompiled_eq
 #print axioms head2_unique
 #print axioms conj_predict
+#print axioms predict_whisper_total
+#print axioms gen_periodic
+#print axioms noRamp_breaks
+#print axioms noHead1_law

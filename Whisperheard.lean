@@ -14,3 +14,4 @@ import Whisperheard.Interp.Decompiled
 import Whisperheard.Interp.Margins
 import Whisperheard.Interp.Gauge
 import Whisperheard.Interp.Generation
+import Whisperheard.Interp.Total

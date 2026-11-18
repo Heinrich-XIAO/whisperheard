@@ -1,0 +1,17 @@
+name: check proofs
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install elan
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: build (checks every proof)
+        run: lake build
+      - name: axiom audit
+        run: lake env lean scripts/Audit.lean
+      - name: run the network
+        run: lake exe whisperheard

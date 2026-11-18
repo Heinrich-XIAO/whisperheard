@@ -256,6 +256,17 @@ theorem logits_eq (hc1 : 0 < c1) (i t : Nat) (ht : t < M.V) :
   unfold Model.unembed at e1 e2 e3 e4
   rw [e1, e2, e3, e4]; simp
 
+/-- **The residual stream after layer 2**: token, position, head 1's fetch,
+and head 2's fetch, nothing else. -/
+theorem resid2_eqOn (hc1 : 0 < c1) (i : Nat) :
+    EqOn M.d (M.resid2 x i) (M.tok (x i) ⊞ M.pos i ⊞ M.S (x (prevPos M.N i)) ⊞ M.O (x (M.attn2 x i))) := by
+  unfold Model.resid2 Head.out Model.attn2
+  generalize M.h2.attn M.d (M.resid1 x) i = a
+  rw [Head.ov_eqOn _ _ _ _ (hs.resid1_eqOn hx hc1 a), Head.ov_add, Head.ov_add]
+  have hz := ((EqOn.refl M.d (M.O (x a))).add (hs.ov2_P' a)).add (hs.ov2_S _ (hx (prevPos M.N a)))
+  rw [vadd_zero, vadd_zero] at hz
+  exact (hs.resid1_eqOn hx hc1 i).add hz
+
 /-- **The network copies the token head 2 attends to.** -/
 theorem predict_eq (hc1 : 0 < c1) (hcU : 0 < cU) (i : Nat) :
     M.predict x i = x (M.attn2 x i) := by

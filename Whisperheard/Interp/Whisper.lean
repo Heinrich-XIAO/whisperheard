@@ -63,6 +63,17 @@ theorem attn1_whisper (i : Nat) : whisper.attn1 x i = prevPos 8 i :=
 theorem attn2_whisper (i : Nat) : whisper.attn2 x i = target 8 x i :=
   whisper_spec.attn2_law whisper_lawHyp (by decide) hx i
 
+/-- **The residual stream after each layer**, exactly. -/
+theorem resid1_whisper (i : Nat) :
+    EqOn 20 (whisper.resid1 x i) (T (x i) ⊞ P i ⊞ whisper.S (x (prevPos 8 i))) :=
+  whisper_spec.resid1_eqOn hx (by decide) i
+
+theorem resid2_whisper (i : Nat) :
+    EqOn 20 (whisper.resid2 x i)
+      (T (x i) ⊞ P i ⊞ whisper.S (x (prevPos 8 i)) ⊞ whisper.O (x (target 8 x i))) := by
+  have := whisper_spec.resid2_eqOn hx (by decide) i
+  rw [attn2_whisper hx] at this; exact this
+
 /-- **Exact logits.** -/
 theorem logits_whisper (i t : Nat) (ht : t < 4) :
     whisper.logits x i t = if t = x (target 8 x i) then 5 else 0 := by
